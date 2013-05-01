@@ -1,0 +1,20 @@
+Let S[i][j] represent the best score you can achieve spending j units of time on the first i exams. You can calculate S[i][j] by looking at S[i-1][k] for each value of k. For each element of S, remember the value of k from the previous row that gave the best result. The answer to what the best score for studying all exams in time T is just S[n][T], and you can use the values of k that you remembered to determine how much time to spend on each exam.
+
+S[][] = 0
+
+for j = 0:T
+   S[0][j] = M[0][j]
+
+for i = 1:n
+   for j = 0:T
+       max = 0
+       for k = 0:j
+           # This is the score you could get by spending j time, spending
+           # k time on this exam and j-k time on the previous exams.
+           Grade = S[i-1][j-k] + M[i][k]
+           if Grade > max
+              max = Grade
+       end for
+       S[i][j] = max
+    end for
+end for
