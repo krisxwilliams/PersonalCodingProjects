@@ -1,8 +1,17 @@
+/**
+ * @author Kris Williams
+ * @eid kxw62
+ *
+ */
+
 public class Program3 implements IProgram3{
 	
 	int noOfClasses;
 	int maximumGrade;
 	GradeFunction gradeCalc; 
+	int[][] premiumAllocations;
+	int[][][] hourAllocations;
+	int previousTotalHours;
 			
 	@Override
 	public void initialize(int numClasses, int maxGrade, GradeFunction gf) {
@@ -13,57 +22,106 @@ public class Program3 implements IProgram3{
 	}
 
 	@Override
-	public int[] computeHours(int totalHours) {
-		//Must establish a matrix to track grades versus hours spent in classes
+	public int[] computeHours(int totalHours) {		
+		//Optimization to prevent repeated work.
+		if(hourAllocations != null && previousTotalHours == totalHours){
+			int[] idealHours = generateIdealHours(totalHours);
+			return idealHours;
+		}
+		
 		int hoursIndex = totalHours + 1;
 		
-		int[][] premiumAllocations = new int[noOfClasses][hoursIndex];
-		int[][][] hourAllocations = new int[noOfClasses][hoursIndex][noOfClasses];
+		previousTotalHours = totalHours;
+		premiumAllocations = new int[noOfClasses][hoursIndex];
+		hourAllocations = new int[noOfClasses][hoursIndex][noOfClasses];
 		
-		for(int i = 1; i < noOfClasses; i++){
-			int[] hourDistribution = new int [noOfClasses];
+		for(int c = 1; c < noOfClasses; c++){
 			
-			for(int j = 0; j < hoursIndex; j++){
+			for(int h = 0; h < hoursIndex; h++){
 				int topGradeSoFar = 0;
 				int premiumK = 0;
 				
-				for(int k = 0; k < (j+1); k++){
-					int thisGrade = premiumAllocations[i-1][j-k] + gradeCalc.grade(i-1, k);
+				for(int k = 0; k < (h+1); k++){
+					int thisGrade = premiumAllocations[c-1][h-k] + gradeCalc.grade(c-1, k);
 					if(thisGrade > topGradeSoFar){
 						topGradeSoFar = thisGrade;
 						premiumK = k;						
 					}
 				}
 				
-				premiumAllocations[i][j] = topGradeSoFar;
-				
-				for(int x = 0; x < noOfClasses; x++){
-					hourAllocations[i][j][i] = hourAllocations[i-1][j-premiumK][x];
-				}				
-				hourAllocations[i][j][i-1] += premiumK;
+				setAllocations(c, h, topGradeSoFar, premiumK);
 			}
 			
 		}
 		
+		int[] idealHours = generateIdealHours(totalHours);
 		
-		for(int i = 1; i < noOfClasses; i++){
-			for(int j = 0; j < hoursIndex; j++){
-				System.out.print(premiumAllocations[i][j] + "\t");
-			}
-			System.out.print("\n");
-		}
-		
-		
-		System.out.println();
-		for(int i = 0; i < noOfClasses; i++){
-			System.out.print(hourAllocations[noOfClasses-1][hoursIndex-1][i] + "\t");		
-		}
-		
-		return null;
+		return idealHours;
 	}
 
 	@Override
-	public int[] computeGrades(int totalHours) {
-		return null;
+	public int[] computeGrades(int totalHours) {		
+		//Optimization to prevent repeated work.
+		if(hourAllocations != null && previousTotalHours == totalHours){
+			int[] idealHours = generateIdealHours(totalHours);
+			int[] idealGrades = generateIdealGrades(idealHours);
+			return idealGrades;
+		}
+		
+		int[] idealHours = computeHours(totalHours);
+		int[] idealGrades = generateIdealGrades(idealHours);
+		
+		for(int i = 0; i < idealGrades.length; i++){
+			System.out.print(idealGrades[i] + "\t");
+		}
+		
+		return idealGrades;
 	}
+	
+	/**
+	 * Method which will set the various allocation properties appropriately after finding the ideal hour allocations.
+	 * A few index adjustments were necessary to ensure the integrity of the arrays, i.e. the hourAllocations at the end.
+	 * @param classIndex Index of the course being studied at the time.
+	 * @param hourIndex Index of the amount of hours available to study with.
+	 * @param topGrade Best possible grade of the selection.
+	 * @param premiumK Best amount of hours to allocate to this particular issue.
+	 */
+	private void setAllocations(int classIndex, int hourIndex, int topGrade, int premiumK) {		
+		premiumAllocations[classIndex][hourIndex] = topGrade;
+		
+		for(int i = 0; i < noOfClasses; i++){
+			hourAllocations[classIndex][hourIndex][i] = hourAllocations[classIndex-1][hourIndex-premiumK][i];
+		}		
+		
+		hourAllocations[classIndex][hourIndex][classIndex-1] += premiumK;
+	}
+	
+	/**
+	 * Method which generates the ideal hour allocations for courses after the hourAllocations property has been populated.
+	 * @param totalHours The number of total available studying hours.
+	 * @return Returns the final array of ideal hours to allocate for classes.
+	 */
+	private int[] generateIdealHours(int totalHours) {
+		int[] idealHours = new int[noOfClasses-1];
+		for(int i = 0; i < noOfClasses-1; i++){
+			idealHours[i] = hourAllocations[noOfClasses-1][totalHours][i];
+		}
+		return idealHours;
+	}
+	
+	/**
+	 * Method which generates the ideal grades array.
+	 * @param idealHours Array generated using the computeHours method, containing the ideal hours to allocate for each class.
+	 * @return Returns the final array of ideal grades if the optimum amount of hours are studied for each.
+	 */
+	private int[] generateIdealGrades(int[] idealHours) {
+		int[] idealGrades = new int[idealHours.length];
+		
+		for(int i = 0; i < idealHours.length; i++){
+			idealGrades[i] = gradeCalc.grade(i, idealHours[i]);
+		}
+		return idealGrades;
+	}
+	
+
 }
