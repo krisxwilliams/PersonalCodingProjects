@@ -6,8 +6,7 @@ public class Program3 implements IProgram3{
 			
 	@Override
 	public void initialize(int numClasses, int maxGrade, GradeFunction gf) {
-		//GradesvsHours = new int[numClasses][numClasses];
-		noOfClasses = numClasses;
+		noOfClasses = numClasses+1;
 		maximumGrade = maxGrade;	
 		gradeCalc = gf;
 		
@@ -16,57 +15,55 @@ public class Program3 implements IProgram3{
 	@Override
 	public int[] computeHours(int totalHours) {
 		//Must establish a matrix to track grades versus hours spent in classes
-		int[][] potentialGradeArray = initalizeGradeArray(totalHours);
-		int[][] premiumAllocations = new int[totalHours][noOfClasses];
+		int hoursIndex = totalHours + 1;
 		
-		int[] optimumGrades = new int[totalHours];
+		int[][] premiumAllocations = new int[noOfClasses][hoursIndex];
+		int[][][] hourAllocations = new int[noOfClasses][hoursIndex][noOfClasses];
 		
-		for(int i = 1; i < totalHours; i++){
-			int topGradeSoFar = 0;
-			int premiumJ = 0;
-			int premiumK = 0;
+		for(int i = 1; i < noOfClasses; i++){
+			int[] hourDistribution = new int [noOfClasses];
 			
-			for(int j = 0; j < noOfClasses; j++){
+			for(int j = 0; j < hoursIndex; j++){
+				int topGradeSoFar = 0;
+				int premiumK = 0;
 				
-				for(int k = 1; k < i; k++){
-					int potentialGrade = potentialGradeArray[k][j];
-					int gradeSum = optimumGrades[i] - potentialGrade + potentialGradeArray[(i-k)][j];
-					if(gradeSum > topGradeSoFar){
-						topGradeSoFar = gradeSum;
-						premiumJ = j;
-						premiumK = k;
+				for(int k = 0; k < (j+1); k++){
+					int thisGrade = premiumAllocations[i-1][j-k] + gradeCalc.grade(i-1, k);
+					if(thisGrade > topGradeSoFar){
+						topGradeSoFar = thisGrade;
+						premiumK = k;						
 					}
 				}
+				
+				premiumAllocations[i][j] = topGradeSoFar;
+				
+				for(int x = 0; x < noOfClasses; x++){
+					hourAllocations[i][j][i] = hourAllocations[i-1][j-premiumK][x];
+				}				
+				hourAllocations[i][j][i-1] += premiumK;
 			}
-			premiumAllocations[i] = optimumGrades;	
-			premiumAllocations[i][premiumK] = premiumAllocations[i][premiumK] + i - premiumJ;
-			optimumGrades[i] = topGradeSoFar;
+			
 		}
 		
-		for(int i = 0; i < totalHours; i++){
-			for(int j = 0; j < noOfClasses; j++){
-				System.out.print(premiumAllocations[i][j] + " ");
+		
+		for(int i = 1; i < noOfClasses; i++){
+			for(int j = 0; j < hoursIndex; j++){
+				System.out.print(premiumAllocations[i][j] + "\t");
 			}
-			System.out.println("\n");
+			System.out.print("\n");
 		}
-				
+		
+		
+		System.out.println();
+		for(int i = 0; i < noOfClasses; i++){
+			System.out.print(hourAllocations[noOfClasses-1][hoursIndex-1][i] + "\t");		
+		}
+		
 		return null;
 	}
 
 	@Override
 	public int[] computeGrades(int totalHours) {
 		return null;
-	}
-	
-	private int[][] initalizeGradeArray(int totalHours) {
-		int[][] potentialGradeArray = new int[totalHours][noOfClasses];
-		
-		for(int i = 0; i < totalHours; i++){
-			for(int j = 0; j < noOfClasses; j++){
-				potentialGradeArray[i][j] = gradeCalc.grade(j, i);
-			}
-		}
-		
-		return potentialGradeArray;		
 	}
 }
